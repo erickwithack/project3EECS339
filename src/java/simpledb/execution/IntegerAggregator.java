@@ -33,7 +33,7 @@ public class IntegerAggregator implements Aggregator {
      * @param what        the aggregation operator
      */
 
-     private Op what;
+    private Op what;
     private int gbfield;
     private Type gbfieldtype;
     private int afield;
@@ -42,9 +42,9 @@ public class IntegerAggregator implements Aggregator {
     public IntegerAggregator(int gbfield, Type gbfieldtype, int afield, Op what) {
         // TODO: some code goes here
         this.what = what;
+        this.gbfieldtype = gbfieldtype;
         this.gbfield = gbfield;
         this.afield = afield;
-        this.gbfieldtype = gbfieldtype;
         this.groups = new HashMap<String, AggregateFields>();
     }
 
@@ -58,24 +58,30 @@ public class IntegerAggregator implements Aggregator {
      */
     public void mergeTupleIntoGroup(Tuple tup) {
         // TODO: some code goes here
-        String groupVal = "";
+        String groupStr = "";
         if (gbfield != NO_GROUPING) {
-            groupVal = tup.getField(gbfield).toString();
+            groupStr = tup.getField(gbfield).toString();
         }
-        AggregateFields agg = groups.get(groupVal);
+        AggregateFields agg = groups.get(groupStr);
         if (agg == null)
-            agg = new AggregateFields(groupVal);
+            agg = new AggregateFields(groupStr);
 
         int x = ((IntField) tup.getField(afield)).getValue();
 
         agg.count++;
         agg.sum += x;
-        agg.min = (x < agg.min ? x : agg.min);
-        agg.max = (x > agg.max ? x : agg.max);
+        if (x < agg.min){
+            agg.min = x;
+        } 
+
+        if (x > agg.max){
+            agg.max = x;
+        }
+        
         if (what==Op.SC_AVG)
             agg.sumCount+=((IntField) tup.getField(afield+1)).getValue();
 
-        groups.put(groupVal, agg);
+        groups.put(groupStr, agg);
     	
     }
 
