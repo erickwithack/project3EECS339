@@ -32,7 +32,7 @@ public class Delete extends Operator {
      private OpIterator child;
      private TupleDesc returnTD;
      private TransactionId tid;
-     private boolean processed=false;
+     private boolean hasItBeenProcessed=false;
 
     public Delete(TransactionId t, OpIterator child) {
         // TODO: some code goes here
@@ -78,10 +78,10 @@ public class Delete extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // TODO: some code goes here
-        if (processed)
+        if (hasItBeenProcessed)
         return null;
     
-    int count = 0;
+    int iter = 0;
     while (child.hasNext()) {
         Tuple t = child.next();
         try {
@@ -89,15 +89,15 @@ public class Delete extends Operator {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        count++;
+        iter++;
     }
 
     // finished scanning
     // generate a new "delete count" tuple
-    Tuple tup = new Tuple(returnTD);
-    tup.setField(0, new IntField(count));
-    processed=true;
-    return tup;
+    Tuple result = new Tuple(returnTD);
+    result.setField(0, new IntField(iter));
+    hasItBeenProcessed=true;
+    return result;
     }
 
     @Override

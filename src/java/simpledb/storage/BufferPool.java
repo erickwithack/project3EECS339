@@ -82,18 +82,17 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
-        // XXX Yuan points out that HashMap is not synchronized, so this is buggy.
-        // XXX TODO(ghuo): do we really know enough to implement NO STEAL here?
-        //     won't we still evict pages?
+        
         if (this.pages.containsKey(pid)) {
 			return this.pages.get(pid);
 		} else {
-			if (this.pages.size() >= this.numPages) {
+            int s = this.pages.size();
+			if ( s>= this.numPages) {
 				this.evictPage();
 			}
-			Page newPage = Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
-			this.pages.put(pid, newPage);
-			return newPage;
+			Page result = Database.getCatalog().getDatabaseFile(pid.getTableId()).readPage(pid);
+			this.pages.put(pid, result);
+			return result;
 		}
     }
 
@@ -170,19 +169,16 @@ public class BufferPool {
 		ArrayList<Page> dirtypages = (ArrayList<Page>) file.insertTuple(tid, t);
 
 		synchronized (this) {
-			for (Page p : dirtypages) {
-				p.markDirty(true, tid);
-
-				
-				if (pages.get(p.getId()) != null) {
-					
-					pages.put(p.getId(), p);
+			for (Page pg : dirtypages) {
+				pg.markDirty(true, tid);
+				if (pages.get(pg.getId()) != null) {
+					pages.put(pg.getId(), pg);
 				} else {
 
 					
 					if (pages.size() >= numPages)
 						evictPage();
-					pages.put(p.getId(), p);
+					pages.put(pg.getId(), pg);
 				}
 			}
 		}
@@ -204,24 +200,21 @@ public class BufferPool {
     public void deleteTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
         // TODO: some code goes here
-        DbFile file = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
-		ArrayList<Page> dirtypages = (ArrayList<Page>) file.deleteTuple(tid, t);
+        DbFile file1 = Database.getCatalog().getDatabaseFile(t.getRecordId().getPageId().getTableId());
+		ArrayList<Page> dirtypages = (ArrayList<Page>) file1.deleteTuple(tid, t);
 
 		synchronized (this) {
-			for (Page p : dirtypages) {
-				p.markDirty(true, tid);
+			for (Page pg : dirtypages) {
+				pg.markDirty(true, tid);
 
-				// if page in pool already, done.
-				if (pages.get(p.getId()) != null) {
-					// replace old page with new one in case deleteTuple returns
-					// a new copy of the page
-					pages.put(p.getId(), p);
+				if (pages.get(pg.getId()) != null) {
+					
+					pages.put(pg.getId(), pg);
 				} else {
 
-					// put page in pool
 					if (pages.size() >= numPages)
 						evictPage();
-					pages.put(p.getId(), p);
+					pages.put(pg.getId(), pg);
 				}
 			}
 		}
@@ -234,9 +227,9 @@ public class BufferPool {
      */
     public synchronized void flushAllPages() throws IOException {
         // TODO: some code goes here
-        Iterator<PageId> i = pages.keySet().iterator();
-		while (i.hasNext())
-			flushPage(i.next());
+        Iterator<PageId> j = pages.keySet().iterator();
+		while (j.hasNext())
+			flushPage(j.next());
 
     }
 
@@ -251,8 +244,8 @@ public class BufferPool {
      */
     public synchronized void removePage(PageId pid) {
         // TODO: some code goes here
-        Page p = pages.get(pid);
-		if (p != null) {
+        Page page1 = pages.get(pid);
+		if (page1 != null) {
 			pages.remove(pid);
 		}
     }
@@ -264,13 +257,13 @@ public class BufferPool {
      */
     private synchronized void flushPage(PageId pid) throws IOException {
         // TODO: some code goes here
-        Page p = pages.get(pid);
-		if (p == null)
+        Page page1 = pages.get(pid);
+		if (page1 == null)
 			return; // not in buffer pool -- doesn't need to be flushed
 
-		DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
-		file.writePage(p);
-		p.markDirty(false, null);
+		DbFile file1 = Database.getCatalog().getDatabaseFile(pid.getTableId());
+		file1.writePage(page1);
+		page1.markDirty(false, null);
     }
 
     /**
@@ -288,8 +281,8 @@ public class BufferPool {
      */
     private synchronized void evictPage() throws DbException {
         // TODO: some code goes here
-        Object pids[] = pages.keySet().toArray();
-		PageId pid = (PageId) pids[random.nextInt(pids.length)];
+        Object pageIdsList[] = pages.keySet().toArray();
+		PageId pid = (PageId) pageIdsList[random.nextInt(pageIdsList.length)];
 		try {
 			Page p = pages.get(pid);
 			if (p.isDirty() != null) { // if this is dirty, remove first

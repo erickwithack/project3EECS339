@@ -36,7 +36,7 @@ public class Insert extends Operator {
     private int tableId;
     private TransactionId tid;
     private TupleDesc returnTD;
-    private boolean processed=false;
+    private boolean hasItBeenProcessed=false;
 
     public Insert(TransactionId t, OpIterator child, int tableId)
             throws DbException {
@@ -45,12 +45,10 @@ public class Insert extends Operator {
         this.tableId = tableId;
         this.tid = t;
 
-        // verify that TupleDescriptors are the same
         if (!child.getTupleDesc().equals(
                 Database.getCatalog().getTupleDesc(tableId)))
             throw new DbException("incompatible tuple descriptors for Insert");
 
-        // we return a 1-field tuple
         Type[] typeAr = new Type[1];
         typeAr[0] = Type.INT_TYPE;
         returnTD = new TupleDesc(typeAr);
@@ -94,26 +92,22 @@ public class Insert extends Operator {
      */
     protected Tuple fetchNext() throws TransactionAbortedException, DbException {
         // TODO: some code goes here
-        if (processed)
+        if (hasItBeenProcessed)
             return null;
-
-        int count = 0;
+        int iter = 0;
         while (child.hasNext()) {
-            Tuple t = child.next();
+            Tuple v = child.next();
             try {
-                Database.getBufferPool().insertTuple(tid, tableId, t);
+                Database.getBufferPool().insertTuple(tid, tableId, v);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            count++;
+            iter++;
         }
-
-        // finished scanning
-        // generate a new "insert count" tuple
-        Tuple tup = new Tuple(returnTD);
-        tup.setField(0, new IntField(count));
-        processed=true;
-        return tup;
+        Tuple result = new Tuple(returnTD);
+        result.setField(0, new IntField(iter));
+        hasItBeenProcessed = true;
+        return result;
     }
 
     @Override

@@ -37,7 +37,6 @@ public class StringAggregator implements Aggregator {
      private int gbfield;
      private Type gbfieldtype;
      private int afield;
-     // a map of groupVal -> AggregateFields
      private HashMap<String, AggregateFields> groups;
      
 
@@ -51,11 +50,6 @@ public class StringAggregator implements Aggregator {
         this.gbfieldtype = gbfieldtype;
         this.groups = new HashMap<String, AggregateFields>();
     }
-
-  
-    
-    
-    
     
     /**
      * Merge a new tuple into the aggregate, grouping as indicated in the constructor
